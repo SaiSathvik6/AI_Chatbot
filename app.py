@@ -129,9 +129,15 @@ def ask_question():
         
         # Generate response
         logger.info(f"📝 Processing question: {question}")
-        
-        enhanced_prompt = inject_business_context(question)
-        
+
+        # Dynamically inject context only for TorkeHub/CRM questions
+        keywords = ["torkehub", "crm", "customer relationship", "dashboard", "client management"]
+        if any(word in question.lower() for word in keywords):
+            enhanced_prompt = inject_business_context(question)
+        else:
+            # Add "Answer:" to general questions too
+            enhanced_prompt = f"Question: {question}\n\nAnswer:"
+
         response = model(
             enhanced_prompt,
             max_tokens=200,
