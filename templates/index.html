@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TorkeHub AI Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 TorkeHub AI Chatbot</h1>
+            <p>Ask me anything about TorkeHub or general questions!</p>
+        </div>
+        
+        <div class="chat-container">
+            <div id="chat-messages" class="chat-messages"></div>
+            
+            <form id="chat-form" class="chat-form">
+                <input 
+                    type="text" 
+                    id="question-input" 
+                    placeholder="Type your question here..." 
+                    required
+                >
+                <button type="submit" id="send-btn">Send</button>
+            </form>
+        </div>
+        
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const questionInput = document.getElementById('question-input');
+        const chatMessages = document.getElementById('chat-messages');
+        const sendBtn = document.getElementById('send-btn');
+        const status = document.getElementById('status');
+
+        // Add message to chat
+        function addMessage(message, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <strong>${isUser ? '👤 You:' : '🤖 Bot:'}</strong>
+                    <p>${message}</p>
+                </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Show status
+        function showStatus(message, isError = false) {
+            status.textContent = message;
+            status.className = `status ${isError ? 'error' : 'success'}`;
+            setTimeout(() => {
+                status.textContent = '';
+                status.className = 'status';
+            }, 3000);
+        }
+
+        // Handle form submission
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            // Disable form during request
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Thinking...';
+            
+            // Add user message
+            addMessage(question, true);
+            questionInput.value = '';
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question: question })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addMessage(data.answer);
+                    showStatus('Response generated successfully!');
+                } else {
+                    addMessage(`Error: ${data.error}`);
+                    showStatus(data.error, true);
+                }
+            } catch (error) {
+                addMessage(`Network error: ${error.message}`);
+                showStatus('Network error occurred', true);
+            } finally {
+                // Re-enable form
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send';
+                questionInput.focus();
+            }
+        });
+
+        // Test connection on load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                showStatus(`Server status: ${data.status}, Model: ${data.model_status}`);
+            } catch (error) {
+                showStatus('Could not connect to server', true);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+Flask
+flask-cors
+requests
+llama-cpp-python
+huggingface-hub
